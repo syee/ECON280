@@ -6,48 +6,41 @@ Description: Python assignment for ECON 280
 """
 
 import numpy
-from numpy import genfromtxt
-import pandas
-from scipy import optimize
+from scipy.stats.distributions import chi2
+from scipy.stats import norm
 
-#Part 1: Median Regression
+#Part 2: Bootstrapping the Median
 
-sampleSize = 200
-replications = 1000
-dgBetaEstimates = numpy.zeros(replications)
+sampleSize = 100
+bootstrapReplications = 500
+monteCarloReplications = 10000
 
+trueMedian = chi2.ppf(0.5, 3)
+z95 = norm.ppf(0.95)
 
-# Gradient-free optimization method
-def optimizationMethod(b, X, Y, length):
-    value = (abs(Y - X*b)/length).sum()
-    return value
+C_asy = numpy.zeros(monteCarloReplications)
+C_boot = numpy.zeros(monteCarloReplications)
 
+for count in range(monteCarloReplications):
+    X = chi2.rvs(3, size = bootstrapReplications)
+    sampleMedian = numpy.median(X)
+    sampleVariance = 1/(4*bootstrapReplications*((chi2.pdf(sampleMedian, 3))**2))
+    CI_low = sampleMedian - z95*numpy.sqrt(sampleVariance)
+    CI_high = sampleMedian + z95*numpy.sqrt(sampleVariance)
+    C_asy[count] = (trueMedian > CI_low) and (trueMedian < CI_high)
 
-def estimateBeta(X, Y, length):
-    estimate = optimize.fmin(optimizationMethod, [1], disp=False, args=(X, Y, length,))
-    return estimate
+    #Bootstrap
+    medianStar = numpy.zeros(bootstrapReplications)
+    for i in range(bootstrapReplications):
+        X_star = numpy.random.choice(X, sampleSize)
+        medianStar[i] = numpy.median(X_star)
 
+    CI_low_b = numpy.quantile(medianStar, 0.05)
+    CI_high_b = numpy.quantile(medianStar, 0.95)
+    C_boot[count] = (trueMedian > CI_low_b) and (trueMedian < CI_high_b)
 
-for count in range(replications):
-    lamda = 1 + numpy.random.poisson(5, sampleSize)
-    X = 1./(lamda + 1)
-    Y = numpy.random.exponential(X, sampleSize)
-    dgBetaEstimates[count] = estimateBeta(X, Y, sampleSize)
+Asy_coverage = numpy.mean(C_asy)
+Boot_coverage = numpy.mean(C_boot)
 
-def estimateEmpiricalBeta(X, Y, numObservations):
-    return estimateBeta(X, Y, numObservations)
-
-# Is there a better way to read in the data with numpy?
-empiricalData = genfromtxt('HW3_data.csv', delimiter=',')
-cleanedData = numpy.delete(empiricalData, 0, axis=0)
-numObservations = len(cleanedData)
-empiricalX = numpy.zeros(numObservations)
-empiricalY = numpy.zeros(numObservations)
-for count in range(numObservations):
-    empiricalX[count] = cleanedData[count][0]
-    empiricalY[count] = cleanedData[count][1]
-
-empiricalBetaEstimate = estimateEmpiricalBeta(empiricalX, empiricalY, numObservations)
-
-print("The data generated beta should be approximately 0.6931. This program generated a beta of " + str(numpy.mean(dgBetaEstimates)) + ".")
-print("The empirical data should have a beta of approximately 1.3141. This program estimates the beta to be " + str(empiricalBetaEstimate[0]) + ".")
+print("Asy coverage is " + str(Asy_coverage))
+print("Bootstrap coverage is " + str(Boot_coverage))
