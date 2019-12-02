@@ -22,9 +22,9 @@ C_asy = numpy.zeros(monteCarloReplications)
 C_boot = numpy.zeros(monteCarloReplications)
 
 for count in range(monteCarloReplications):
-    X = chi2.rvs(3, size = bootstrapReplications)
+    X = chi2.rvs(3, size = sampleSize)
     sampleMedian = numpy.median(X)
-    sampleVariance = 1/(4*bootstrapReplications*((chi2.pdf(sampleMedian, 3))**2))
+    sampleVariance = 1/(4*sampleSize*((chi2.pdf(sampleMedian, 3))**2))
     CI_low = sampleMedian - z95*numpy.sqrt(sampleVariance)
     CI_high = sampleMedian + z95*numpy.sqrt(sampleVariance)
     C_asy[count] = (trueMedian > CI_low) and (trueMedian < CI_high)
