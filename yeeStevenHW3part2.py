@@ -2,7 +2,7 @@
 """
 Author: Steven Yee
 Date: 12/01/2019
-Description: Python assignment for ECON 280
+Description: Python assignment for ECON 280 Part 2
 """
 
 import numpy
